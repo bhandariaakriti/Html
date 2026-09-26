@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Bharatpur SmartTrip AI</title>
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f7f5;
+            color: #222;
+        }
+
+        header {
+            background: #087f5b;
+            color: white;
+            padding: 22px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin-bottom: 7px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 25px auto;
+            padding: 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-bottom: 18px;
+            color: #087f5b;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 7px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        button {
+            background: #087f5b;
+            color: white;
+            border: none;
+            padding: 13px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 18px;
+        }
+
+        button:hover {
+            background: #056b4c;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .place {
+            border-left: 5px solid #087f5b;
+            padding: 15px;
+            margin: 12px 0;
+            background: #f7faf8;
+            border-radius: 8px;
+        }
+
+        .place h3 {
+            margin-bottom: 7px;
+        }
+
+        .tags {
+            margin-top: 8px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #d8f3dc;
+            color: #075b42;
+            padding: 5px 9px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 12px;
+        }
+
+        #map {
+            height: 400px;
+            border-radius: 12px;
+        }
+
+        .chat-box {
+            height: 300px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user {
+            background: #087f5b;
+            color: white;
+            margin-left: auto;
+        }
+
+        .bot {
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+        }
+
+        .chat-input button {
+            margin-top: 0;
+        }
+
+        .cost {
+            font-size: 18px;
+            font-weight: bold;
+            color: #087f5b;
+            margin-top: 15px;
+        }
+
+        @media(max-width:700px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🌿 Bharatpur SmartTrip AI</h1>
+    <p>Personalized Tourism Recommendation System</p>
+</header>
+
+<div class="container">
+
+    <!-- USER INPUT -->
+    <div class="card">
+        <h2>✨ Plan Your Bharatpur Trip</h2>
+
+        <div class="form-grid">
+
+            <div>
+                <label>Number of Days</label>
+                <input type="number" id="days" value="2" min="1" max="7">
+            </div>
+
+            <div>
+                <label>Budget (NPR)</label>
+                <input type="number" id="budget" value="5000">
+            </div>
+
+            <div>
+                <label>Group</label>
+                <select id="group">
+                    <option>Solo</option>
+                    <option>Couple</option>
+                    <option>Friends</option>
+                    <option>Family</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Transport</label>
+                <select id="transport">
+                    <option>Bike</option>
+                    <option>Car</option>
+                    <option>Public Transport</option>
+                </select>
+            </div>
+
+        </div>
+
+        <br>
+
+        <label>What are you interested in?</label>
+
+        <select id="interest">
+            <option>Nature</option>
+            <option>Wildlife</option>
+            <option>Culture</option>
+            <option>Food</option>
+            <option>Adventure</option>
+            <option>Relaxation</option>
+        </select>
+
+        <button onclick="generateTrip()">
+            🤖 Generate My Trip
+        </button>
+    </div>
+
+
+    <!-- RESULTS -->
+
+    <div class="card results" id="results">
+
+        <h2>🧳 Your Personalized Bharatpur Itinerary</h2>
+
+        <div id="itinerary"></div>
+
+        <div class="cost" id="totalCost"></div>
+
+    </div>
+
+
+    <!-- MAP -->
+
+    <div class="card results" id="mapSection">
+
+        <h2>🗺️ Your Bharatpur Map</h2>
+
+        <div id="map"></div>
+
+    </div>
+
+
+    <!-- CHATBOT -->
+
+    <div class="card">
+
+        <h2>🤖 Ask Bharatpur AI</h2>
+
+        <div class="chat-box" id="chatBox">
+
+            <div class="message bot">
+                Namaste! 👋 I'm Bharatpur SmartTrip AI.
+                Ask me about places, food, budget trips or activities in Bharatpur.
+            </div>
+
+        </div>
+
+        <div class="chat-input">
+
+            <input
+                type="text"
+                id="chatInput"
+                placeholder="Example: Where can I go with Rs. 2000?"
+                onkeydown="if(event.key==='Enter') sendMessage()"
+            >
+
+            <button onclick="sendMessage()">Send</button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<script>
+
+/* =========================
+   BHARATPUR TOURISM DATABASE
+========================= */
+
+const places = [
+
+    {
+        name: "Chitwan National Park",
+        type: ["Nature", "Wildlife", "Adventure"],
+        cost: 1500,
+        lat: 27.5291,
+        lng: 84.3542,
+        description:
+        "Explore wildlife, forests and jungle activities."
+    },
+
+    {
+        name: "Narayani River",
+        type: ["Nature", "Relaxation"],
+        cost: 300,
+        lat: 27.6800,
+        lng: 84.4300,
+        description:
+        "Enjoy the riverside environment and sunset."
+    },
+
+    {
+        name: "Devghat",
+        type: ["Culture", "Nature", "Relaxation"],
+        cost: 500,
+        lat: 27.7322,
+        lng: 84.3681,
+        description:
+        "Important religious and cultural destination."
+    },
+
+    {
+        name: "Bishazari Tal",
+        type: ["Nature", "Wildlife"],
+        cost: 600,
+        lat: 27.6167,
+        lng: 84.4000,
+        description:
+        "Wetland area popular for birds and nature."
+    },
+
+    {
+        name: "Maula Kalika Temple",
+        type: ["Culture", "Nature"],
+        cost: 400,
+        lat: 27.7005,
+        lng: 84.4198,
+        description:
+        "Hilltop temple with views of the surrounding area."
+    },
+
+    {
+        name: "Bharatpur Food Experience",
+        type: ["Food", "Culture"],
+        cost: 500,
+        lat: 27.6833,
+        lng: 84.4333,
+        description:
+        "Discover local food and traditional flavors."
+    }
+
+];
+
+
+/* =========================
+   MAP
+========================= */
+
+let map;
+let markers = [];
+
+function initializeMap() {
+
+    map = L.map('map').setView(
+        [27.6833, 84.4333],
+        11
+    );
+
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            attribution: '© OpenStreetMap'
+        }
+    ).addTo(map);
+}
+
+
+/* =========================
+   AI RECOMMENDATION ENGINE
+========================= */
+
+function generateTrip() {
+
+    const days =
+        parseInt(document.getElementById("days").value);
+
+    const budget =
+        parseInt(document.getElementById("budget").value);
+
+    const interest =
+        document.getElementById("interest").value;
+
+
+    if (!budget || budget <= 0) {
+        alert("Please enter a valid budget.");
+        return;
+    }
+
+
+    /*
+       Score every destination according
+       to user's interest and budget.
+    */
+
+    let recommendations = places.map(place => {
+
+        let score = 0;
+
+        if (place.type.includes(interest)) {
+            score += 10;
+        }
+
+        if (place.cost <= budget) {
+            score += 5;
+        }
+
+        return {
+            ...place,
+            score: score
+        };
+
+    });
+
+
+    recommendations.sort(
+        (a,b) => b.score - a.score
+    );
+
+
+    /*
+       Select places according to number
+       of days.
+    */
+
+    const selected =
+        recommendations.slice(
+            0,
+            Math.min(days * 2, recommendations.length)
+        );
+
+
+    let html = "";
+
+    let total = 0;
+
+
+    for (let day = 1; day <= days; day++) {
+
+        html += `<h3>📅 Day ${day}</h3>`;
+
+        const first =
+            selected[(day - 1) * 2];
+
+        const second =
+            selected[(day - 1) * 2 + 1];
+
+
+        if (first) {
+
+            html += createPlaceHTML(
+                "🌅 Morning",
+                first
+            );
+
+            total += first.cost;
+        }
+
+
+        if (second) {
+
+            html += createPlaceHTML(
+                "🌇 Afternoon / Evening",
+                second
+            );
+
+            total += second.cost;
+        }
+
+    }
+
+
+    document.getElementById("itinerary").innerHTML =
+        html;
+
+    document.getElementById("totalCost").innerHTML =
+        `Estimated activity cost: NPR ${total}`;
+
+
+    document.getElementById("results").style.display =
+        "block";
+
+    document.getElementById("mapSection").style.display =
+        "block";
+
+
+    updateMap(selected);
+
+}
+
+
+function createPlaceHTML(time, place) {
+
+    return `
+
+        <div class="place">
+
+            <h3>${time} — ${place.name}</h3>
+
+            <p>${place.description}</p>
+
+            <div class="tags">
+
+                ${place.type.map(
+                    t => `<span class="tag">${t}</span>`
+                ).join("")}
+
+            </div>
+
+            <p>
+                💰 Estimated cost:
+                NPR ${place.cost}
+            </p>
+
+        </div>
+
+    `;
+}
+
+
+/* =========================
+   UPDATE MAP
+========================= */
+
+function updateMap(selected) {
+
+    if (!map) {
+        initializeMap();
+    }
+
+    markers.forEach(
+        marker => map.removeLayer(marker)
+    );
+
+    markers = [];
+
+
+    selected.forEach(place => {
+
+        const marker =
+            L.marker([
+                place.lat,
+                place.lng
+            ])
+            .addTo(map)
+            .bindPopup(`
+                <b>${place.name}</b><br>
+                ${place.description}
+            `);
+
+        markers.push(marker);
+
+    });
+
+}
+
+
+/* =========================
+   SIMPLE AI CHATBOT
+========================= */
+
+function sendMessage() {
+
+    const input =
+        document.getElementById("chatInput");
+
+    const message =
+        input.value.trim();
+
+    if (!message) return;
+
+
+    addMessage(
+        message,
+        "user"
+    );
+
+
+    input.value = "";
+
+
+    setTimeout(() => {
+
+        const answer =
+            getAIResponse(message.toLowerCase());
+
+        addMessage(
+            answer,
+            "bot"
+        );
+
+    }, 500);
+
+}
+
+
+function addMessage(text, type) {
+
+    const chat =
+        document.getElementById("chatBox");
+
+    const div =
+        document.createElement("div");
+
+    div.className =
+        `message ${type}`;
+
+    div.innerText =
+        text;
+
+    chat.appendChild(div);
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+}
+
+
+/* =========================
+   CHATBOT KNOWLEDGE
+========================= */
+
+function getAIResponse(message) {
+
+    if (
+        message.includes("2000") ||
+        message.includes("cheap") ||
+        message.includes("budget")
+    ) {
+
+        return `
+For a low-budget trip, you can consider
+Narayani River, Devghat and local food.
+Try to use public transportation and
+prioritize nearby destinations.
+        `;
+    }
+
+
+    if (
+        message.includes("family") ||
+        message.includes("children")
+    ) {
+
+        return `
+For a family trip, consider peaceful
+nature and cultural destinations such as
+Narayani River, Devghat and Bishazari Tal.
+        `;
+    }
+
+
+    if (
+        message.includes("wildlife") ||
+        message.includes("animal") ||
+        message.includes("jungle")
+    ) {
+
+        return `
+For wildlife experiences, consider
+Chitwan National Park and Bishazari Tal.
+Your exact itinerary should also consider
+your available time and budget.
+        `;
+    }
+
+
+    if (
+        message.includes("food") ||
+        message.includes("eat") ||
+        message.includes("restaurant")
+    ) {
+
+        return `
+Bharatpur and the surrounding Chitwan area
+offer local Nepali food and traditional
+food experiences. You can include a local
+food stop in your itinerary.
+        `;
+    }
+
+
+    if (
+        message.includes("nature") ||
+        message.includes("peaceful")
+    ) {
+
+        return `
+For nature and relaxation, consider
+Narayani River, Bishazari Tal and Devghat.
+        `;
+    }
+
+
+    if (
+        message.includes("temple") ||
+        message.includes("religious")
+    ) {
+
+        return `
+You can explore Devghat and Maula Kalika
+Temple for cultural and religious tourism.
+        `;
+    }
+
+
+    return `
+I can help you with Bharatpur destinations,
+budget trips, wildlife, nature, culture,
+food and personalized itineraries.
+Try asking: "Suggest a cheap 2-day trip."
+    `;
+}
+
+
+/* Start map */
+
+initializeMap();
+
+</script>
+
+</body>
+</html>
